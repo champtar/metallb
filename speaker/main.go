@@ -105,7 +105,9 @@ func main() {
 	}()
 	defer logger.Log("op", "shutdown", "msg", "done")
 
-	sList, err := speakerlist.New(logger, *myNode, *mlBindAddr, *mlBindPort, *mlSecret, *namespace, *mlLabels, stopCh)
+	// If a resync is ongoing, we want to start a new one so make this chan buffer 1 event
+	resyncSvcCh := make(chan struct{}, 1)
+	sList, err := speakerlist.New(logger, *myNode, *mlBindAddr, *mlBindPort, *mlSecret, *namespace, *mlLabels, stopCh, resyncSvcCh)
 	if err != nil {
 		os.Exit(1)
 	}
@@ -136,6 +138,8 @@ func main() {
 		ServiceChanged: ctrl.SetBalancer,
 		ConfigChanged:  ctrl.SetConfig,
 		NodeChanged:    ctrl.SetNode,
+
+		ResyncSvcCh: resyncSvcCh,
 	})
 	if err != nil {
 		logger.Log("op", "startup", "error", err, "msg", "failed to create k8s client")
