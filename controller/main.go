@@ -153,7 +153,7 @@ func main() {
 	client, err := k8s.New(&k8s.Config{
 		ProcessName:   "metallb-controller",
 		ConfigMapName: *config,
-		ConfigMapNS:   *namespace,
+		Namespace:     *namespace,
 		MetricsPort:   *port,
 		Logger:        logger,
 		Kubeconfig:    *kubeconfig,
