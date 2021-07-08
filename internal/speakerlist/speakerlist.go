@@ -37,9 +37,10 @@ type SpeakerList struct {
 	namespace   string
 	labels      string
 	// The following fields are nil when memberlist is disabled.
-	mlEventCh chan memberlist.NodeEvent
-	ml        *memberlist.Memberlist
-	mlJoinCh  chan struct{}
+	mlEventCh  chan memberlist.NodeEvent
+	ml         *memberlist.Memberlist
+	mlSpeakers map[string]bool // Alive speakers according to memberlist.
+	mlJoinCh   chan struct{}
 
 	mlSpeakerIPs []string // Speaker pod IPs.
 }
@@ -102,6 +103,7 @@ func New(logger gokitlog.Logger, nodeName, bindAddr, bindPort, secret, namespace
 	}
 
 	sl.ml = ml
+	sl.mlSpeakers = map[string]bool{}
 
 	return &sl, nil
 }
@@ -372,7 +374,15 @@ func (sl *SpeakerList) memberlistWatchEvents() {
 	for {
 		select {
 		case e := <-sl.mlEventCh:
-			sl.l.Log("msg", "node event - forcing sync", "node addr", e.Node.Addr, "node name", e.Node.Name, "node event", event2String(e.Event))
+			sl.l.Log("msg", "Node event", "node addr", e.Node.Addr, "node name", e.Node.Name, "node event", event2String(e.Event))
+			sl.Lock()
+			if e.Event == memberlist.NodeLeave {
+				delete(sl.mlSpeakers, e.Node.Name)
+			} else {
+				// If it's not NodeLeave then node is alive
+				sl.mlSpeakers[e.Node.Name] = true
+			}
+			sl.Unlock()
 			sl.forceSvcSync()
 		case <-sl.stopCh:
 			return
