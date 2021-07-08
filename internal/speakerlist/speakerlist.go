@@ -27,6 +27,7 @@ import (
 
 // SpeakerList represents a list of healthy speakers.
 type SpeakerList struct {
+	sync.Mutex  // Must be locked while accessing any of the internal SpeakerList maps or arrays
 	l           gokitlog.Logger
 	client      *k8s.Client
 	resyncSvcCh chan struct{}
@@ -38,8 +39,7 @@ type SpeakerList struct {
 	ml        *memberlist.Memberlist
 	mlJoinCh  chan struct{}
 
-	mlMux        sync.Mutex // Mutex for mlSpeakerIPs.
-	mlSpeakerIPs []string   // Speaker pod IPs.
+	mlSpeakerIPs []string // Speaker pod IPs.
 }
 
 // New creates a new SpeakerList and returns a pointer to it.
@@ -140,9 +140,9 @@ func (sl *SpeakerList) Start(client *k8s.Client) {
 		iplist = nil
 	}
 
-	sl.mlMux.Lock()
+	sl.Lock()
 	sl.mlSpeakerIPs = iplist
-	sl.mlMux.Unlock()
+	sl.Unlock()
 
 	// Update mlSpeakerIPs in the background.
 	go sl.updateSpeakerIPs()
@@ -171,9 +171,9 @@ func (sl *SpeakerList) updateSpeakerIPs() {
 				continue
 			}
 
-			sl.mlMux.Lock()
+			sl.Lock()
 			sl.mlSpeakerIPs = iplist
-			sl.mlMux.Unlock()
+			sl.Unlock()
 		}
 	}
 }
@@ -243,8 +243,8 @@ func (sl *SpeakerList) mlJoin() {
 
 	members := sl.members()
 
-	sl.mlMux.Lock()
-	defer sl.mlMux.Unlock()
+	sl.Lock()
+	defer sl.Unlock()
 
 	for _, ip := range sl.mlSpeakerIPs {
 		// If an IP is not a member of the cluster, add it to joinIPs.
