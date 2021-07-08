@@ -137,7 +137,7 @@ func (sl *SpeakerList) Start(client *k8s.Client) {
 	}
 
 	// Initialize sl.mlSpeakerIPs.
-	iplist, err := sl.mlSpeakers()
+	iplist, err := sl.getSpeakersIPs()
 	if err != nil {
 		sl.l.Log("op", "memberDiscovery", "error", err, "msg", "failed to get pod IPs")
 		iplist = nil
@@ -168,7 +168,7 @@ func (sl *SpeakerList) updateSpeakerIPs() {
 			return
 		case <-time.After(5 * time.Minute):
 			// This blocks until the API server responds.
-			iplist, err := sl.mlSpeakers()
+			iplist, err := sl.getSpeakersIPs()
 			if err != nil {
 				sl.l.Log("op", "memberDiscovery", "error", err, "msg", "failed to get pod IPs")
 				continue
@@ -181,7 +181,7 @@ func (sl *SpeakerList) updateSpeakerIPs() {
 	}
 }
 
-func (sl *SpeakerList) mlSpeakers() ([]string, error) {
+func (sl *SpeakerList) getSpeakersIPs() ([]string, error) {
 	// This call blocks until we get a response from the API server.
 	// In the client-go version we are using, there is no way to use a
 	// context. Newer versions of client-go support using a context
