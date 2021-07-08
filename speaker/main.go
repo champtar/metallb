@@ -377,7 +377,7 @@ type Protocol interface {
 	SetNode(gokitlog.Logger, *v1.Node) error
 }
 
-// Speakerlist represents a list of healthy speakers.
+// A SpeakerList returns usable speakers.
 type SpeakerList interface {
 	UsableSpeakers() map[string]bool
 	Rejoin()
